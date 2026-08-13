@@ -1,0 +1,10 @@
+services:
+  dev:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "4321:4321"
+    command: sh -c "pnpm install && pnpm dev"
+    stdin_open: true
+    tty: true
