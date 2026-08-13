@@ -11,6 +11,8 @@ if ! id -u "$HOST_UID" >/dev/null 2>&1; then
   useradd -m -u "$HOST_UID" -g "$HOST_GID" appuser
 fi
 
+rm -f /app/.astro/dev.json
+
 USER_HOME=$(getent passwd "$HOST_UID" | cut -d: -f6)
 
 exec gosu "$HOST_UID":"$HOST_GID" env HOME="$USER_HOME" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 "$@"

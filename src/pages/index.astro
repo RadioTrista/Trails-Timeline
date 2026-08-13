@@ -1,5 +1,5 @@
 ---
-
+import TimelineChart from "../components/TimelineChart.astro";
 ---
 
 <html lang="en">
@@ -12,6 +12,49 @@
 		<title>Trails Timeline</title>
 	</head>
 	<body>
-		<h1>Trails Timeline</h1>
+		<header class="masthead">
+			<p class="masthead-title">A Chronicle of Zemuria</p>
+			<p class="masthead-tagline">
+				Every recorded event, from the Great Collapse to the present day
+			</p>
+		</header>
+
+		<nav class="controls" aria-label="Timeline filters">
+			<div class="control-group" role="group" aria-label="Filter by game">
+				<!-- checkboxes or a multi-select: which games to include -->
+			</div>
+
+			<div class="control-group">
+				<!-- free-text search across title/summary -->
+			</div>
+		</nav>
+
+		<main class="timeline-main">
+			<section
+				class="timeline-viewport"
+				aria-label="Interactive timeline"
+			>
+				<TimelineChart />
+			</section>
+
+			<aside class="event-detail" aria-live="polite" hidden>
+				<button
+					class="event-detail-close"
+					aria-label="Close event details">×</button
+				>
+				<p class="event-detail-date"><!-- date --></p>
+				<h2 class="event-detail-title"><!-- event title --></h2>
+				<p class="event-detail-meta">
+					<!-- game, region, characters -->
+				</p>
+				<div class="event-detail-body">
+					<!-- summary + expandable details -->
+				</div>
+			</aside>
+		</main>
+
+		<script>
+			import "../scripts/date.js";
+		</script>
 	</body>
 </html>

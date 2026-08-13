@@ -1,5 +1,7 @@
 FROM node:22-slim
 
+ENV ASTRO_TELEMETRY_DISABLED=1
+
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 RUN apt-get update && apt-get install -y gosu && rm -rf /var/lib/apt/lists/*

@@ -1,0 +1,183 @@
+---
+// src/components/TimelineChart.astro
+import { getCollection } from "astro:content";
+import { sortKey, formatDate, type EventDate } from "../scripts/date";
+
+const rawEvents = await getCollection("events");
+
+// Sort once on the server and serialize only what the client needs to
+// render — no point shipping the full content-collection object (slug
+// metadata, etc.) down to the browser.
+const events = rawEvents
+    .map(
+        (entry: {
+            id: any;
+            data: { title: any; game: any; date: EventDate };
+        }) => ({
+            id: entry.id,
+            title: entry.data.title,
+            game: entry.data.game,
+            dateLabel: formatDate(entry.data.date),
+            key: sortKey(entry.data.date),
+        }),
+    )
+    .sort((a: { key: number }, b: { key: number }) => a.key - b.key);
+---
+
+<section class="timeline-viewport" aria-label="Interactive timeline">
+    <div id="timeline-root" data-events={JSON.stringify(events)}></div>
+</section>
+
+<style>
+    .timeline-viewport {
+        background: var(--color-parchment);
+        padding: 32px 16px 48px;
+        overflow-x: auto;
+    }
+
+    :global(.timeline-axis path),
+    :global(.timeline-axis line) {
+        stroke: var(--color-gold);
+    }
+
+    :global(.timeline-axis text) {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        fill: var(--color-ink);
+    }
+
+    :global(.event-marker) {
+        fill: var(--color-burgundy);
+        stroke: var(--color-parchment);
+        stroke-width: 1.5px;
+        cursor: pointer;
+        transition: r 0.15s ease;
+    }
+
+    :global(.event-marker:hover),
+    :global(.event-marker:focus-visible) {
+        r: 7;
+        outline: none;
+    }
+
+    :global(.event-label) {
+        font-family: var(--font-display);
+        font-size: 12px;
+        fill: var(--color-ink);
+        pointer-events: none;
+    }
+</style>
+
+<script>
+    import * as d3 from "d3";
+
+    interface RenderEvent {
+        id: string;
+        title: string;
+        era: string;
+        game: string;
+        dateLabel: string;
+        key: number;
+    }
+
+    const root = document.getElementById("timeline-root");
+    if (!root) throw new Error("timeline-root not found");
+
+    const events: RenderEvent[] = JSON.parse(root.dataset.events ?? "[]");
+
+    function render() {
+        root!.innerHTML = "";
+
+        if (events.length === 0) {
+            root!.textContent =
+                "No events yet — add some to src/content/events.";
+            return;
+        }
+
+        const width = Math.max(root!.clientWidth, events.length * 90);
+        const height = 220;
+        const margin = { top: 20, right: 40, bottom: 40, left: 40 };
+
+        const minKey = events[0].key;
+        const maxKey = events[events.length - 1].key;
+
+        // Guard against a single-event dataset, where domain min === max
+        // would otherwise collapse the scale to a single point.
+        const domain =
+            minKey === maxKey ? [minKey - 365, maxKey + 365] : [minKey, maxKey];
+
+        const x = d3
+            .scaleLinear()
+            .domain(domain)
+            .range([margin.left, width - margin.right]);
+
+        const svg = d3
+            .select(root)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("viewBox", `0 0 ${width} ${height}`);
+
+        // Baseline axis line
+        svg.append("line")
+            .attr("class", "timeline-axis")
+            .attr("x1", margin.left)
+            .attr("x2", width - margin.right)
+            .attr("y1", height - margin.bottom)
+            .attr("y2", height - margin.bottom)
+            .attr("stroke", "var(--color-gold)")
+            .attr("stroke-width", 1);
+
+        // Event markers
+        const marker = svg
+            .selectAll("g.event")
+            .data(events)
+            .join("g")
+            .attr("class", "event")
+            .attr(
+                "transform",
+                (d) => `translate(${x(d.key)}, ${height - margin.bottom})`,
+            );
+
+        marker
+            .append("circle")
+            .attr("class", "event-marker")
+            .attr("r", 5)
+            .attr("tabindex", 0)
+            .attr("role", "button")
+            .attr("aria-label", (d) => `${d.title}, ${d.dateLabel}`)
+            .on("click", (_event, d) => {
+                // No shared state store yet — dispatching a plain custom event
+                // for now so EventDetail can listen without a hard dependency.
+                // Swap this for a nanostores setter once that's wired up.
+                window.dispatchEvent(
+                    new CustomEvent("timeline:select", { detail: d }),
+                );
+            })
+            .on("keydown", (event, d) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    window.dispatchEvent(
+                        new CustomEvent("timeline:select", { detail: d }),
+                    );
+                }
+            });
+
+        marker
+            .append("text")
+            .attr("class", "event-label")
+            .attr("y", -12)
+            .attr("text-anchor", "middle")
+            .text((d) =>
+                d.title.length > 20 ? d.title.slice(0, 18) + "…" : d.title,
+            );
+    }
+
+    render();
+
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(render, 150);
+    });
+</script>
