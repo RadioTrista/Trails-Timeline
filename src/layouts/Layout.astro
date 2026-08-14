@@ -1,0 +1,40 @@
+---
+import "../styles/tokens.css";
+
+interface Props {
+    title?: string;
+}
+
+const { title = "The Trails Timeline" } = Astro.props;
+---
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <link
+            rel="icon"
+            type="image/svg+xml"
+            href="/Trails-Timeline/favicon.svg"
+        />
+        <link rel="icon" href="/Trails-Timeline/favicon.ico" />
+        <meta name="viewport" content="width=device-width" />
+        <meta name="generator" content={Astro.generator} />
+        <title>Trails Timeline</title>
+    </head>
+    <body>
+        <slot />
+    </body>
+</html>
+
+<style is:global>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: var(--color-parchment);
+        color: var(--color-ink);
+        font-family: var(--font-body);
+    }
+</style>

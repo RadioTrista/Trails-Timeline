@@ -1,60 +1,214 @@
 ---
 import TimelineChart from "../components/TimelineChart.astro";
+import Layout from "../layouts/Layout.astro";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Trails Timeline</title>
-	</head>
-	<body>
-		<header class="masthead">
-			<p class="masthead-title">A Chronicle of Zemuria</p>
-			<p class="masthead-tagline">
-				Every recorded event, from the Great Collapse to the present day
-			</p>
-		</header>
+<Layout>
+	<header class="masthead">
+		<p class="masthead-title">A Chronicle of Zemuria</p>
+		<p class="masthead-tagline">
+			Every recorded event, from the Great Collapse to the present day
+		</p>
+	</header>
 
-		<nav class="controls" aria-label="Timeline filters">
-			<div class="control-group" role="group" aria-label="Filter by game">
-				<!-- checkboxes or a multi-select: which games to include -->
-			</div>
+	<nav class="controls" aria-label="Timeline filters">
+		<div class="control-group" role="group" aria-label="Filter by game">
+			<!-- checkboxes or a multi-select: which games to include -->
+		</div>
 
-			<div class="control-group">
-				<!-- free-text search across title/summary -->
-			</div>
-		</nav>
+		<div class="control-group">
+			<!-- free-text search across title/summary -->
+		</div>
+	</nav>
 
-		<main class="timeline-main">
-			<section
-				class="timeline-viewport"
-				aria-label="Interactive timeline"
+	<main class="timeline-main">
+		<section class="timeline-viewport" aria-label="Interactive timeline">
+			<TimelineChart />
+		</section>
+
+		<aside class="event-detail" aria-live="polite" hidden>
+			<button class="event-detail-close" aria-label="Close event details"
+				>×</button
 			>
-				<TimelineChart />
-			</section>
+			<p class="event-detail-date"></p>
+			<h2 class="event-detail-title"></h2>
+			<div class="event-detail-body"></div>
+		</aside>
+	</main>
 
-			<aside class="event-detail" aria-live="polite" hidden>
-				<button
-					class="event-detail-close"
-					aria-label="Close event details">×</button
-				>
-				<p class="event-detail-date"><!-- date --></p>
-				<h2 class="event-detail-title"><!-- event title --></h2>
-				<p class="event-detail-meta">
-					<!-- game, region, characters -->
-				</p>
-				<div class="event-detail-body">
-					<!-- summary + expandable details -->
-				</div>
-			</aside>
-		</main>
+	<script>
+		import "../scripts/date.js";
+	</script>
+</Layout>
 
-		<script>
-			import "../scripts/date.js";
-		</script>
-	</body>
-</html>
+<style>
+	.masthead {
+		padding: 48px 24px 28px;
+		text-align: center;
+		border-bottom: var(--rule-gold);
+		background: var(--color-parchment);
+	}
+
+	.masthead-title {
+		margin: 0;
+		font-family: var(--font-display);
+		font-weight: 600;
+		font-size: clamp(2rem, 5vw, 3.2rem);
+		color: var(--color-burgundy);
+		letter-spacing: 0.01em;
+	}
+
+	.masthead-tagline {
+		margin: 10px 0 0;
+		font-family: var(--font-body);
+		font-style: italic;
+		color: var(--color-ink);
+		opacity: 0.75;
+		font-size: 1rem;
+	}
+
+	.controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 24px;
+		padding: 14px 24px;
+		background: var(--color-ink);
+		border-bottom: var(--rule-gold);
+	}
+
+	.control-group {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-parchment);
+		min-height: 20px; /* keeps the bar a consistent height while empty */
+	}
+
+	.timeline-main {
+		position: relative;
+	}
+
+	.event-detail {
+		position: fixed;
+		top: 0;
+		right: 0;
+		height: 100%;
+		width: min(400px, 90vw);
+		background: var(--color-parchment);
+		border-left: var(--rule-gold);
+		box-shadow: -12px 0 30px rgba(0, 0, 0, 0.25);
+		padding: 28px 24px;
+		overflow-y: auto;
+		z-index: 10;
+	}
+
+	.event-detail[hidden] {
+		display: none;
+	}
+
+	.event-detail-close {
+		position: absolute;
+		top: 16px;
+		right: 16px;
+		background: none;
+		border: none;
+		font-size: 1.4rem;
+		line-height: 1;
+		color: var(--color-burgundy);
+		cursor: pointer;
+		padding: 4px 8px;
+	}
+
+	.event-detail-close:hover,
+	.event-detail-close:focus-visible {
+		color: var(--color-ink);
+	}
+
+	.event-detail-date {
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--color-gold);
+		margin: 24px 0 4px;
+	}
+
+	.event-detail-title {
+		font-family: var(--font-display);
+		font-size: 1.6rem;
+		color: var(--color-burgundy);
+		margin: 0 0 8px;
+	}
+
+	.event-detail-body {
+		font-family: var(--font-body);
+		font-size: 0.95rem;
+		line-height: 1.6;
+		color: var(--color-ink);
+		border-top: var(--rule-gold);
+		padding-top: 16px;
+	}
+</style>
+
+<script>
+	interface SelectedEvent {
+		title: string;
+		dateLabel: string;
+		summary: string;
+		details: string;
+	}
+
+	const panel = document.querySelector<HTMLElement>(".event-detail");
+	const dateElement = panel?.querySelector(".event-detail-date");
+	const titleElement = panel?.querySelector(".event-detail-title");
+	const bodyElement = panel?.querySelector(".event-detail-body");
+	const closeBtn = panel?.querySelector<HTMLButtonElement>(
+		".event-detail-close",
+	);
+
+	if (!panel || !dateElement || !titleElement || !bodyElement || !closeBtn) {
+		throw new Error(
+			"Event detail panel is missing expected child elements",
+		);
+	}
+
+	let lastFocused: HTMLElement | null = null;
+
+	function openPanel(data: SelectedEvent) {
+		lastFocused = document.activeElement as HTMLElement;
+
+		dateElement!.textContent = data.dateLabel;
+		titleElement!.textContent = data.title;
+
+		bodyElement!.innerHTML = "";
+
+		const summaryParagraph = document.createElement("p");
+
+		summaryParagraph.textContent = data.summary;
+		bodyElement!.appendChild(summaryParagraph);
+
+		panel!.hidden = false;
+		closeBtn!.focus();
+	}
+
+	function closePanel() {
+		panel!.hidden = true;
+		lastFocused?.focus();
+	}
+
+	window.addEventListener("timeline:select", (event) => {
+		openPanel((event as CustomEvent<SelectedEvent>).detail);
+	});
+
+	closeBtn.addEventListener("click", closePanel);
+
+	window.addEventListener("keydown", (event) => {
+		if (event.key === "Escape" && !panel!.hidden) {
+			closePanel();
+		}
+	});
+</script>

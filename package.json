@@ -1,18 +1,24 @@
 {
-  "name": "tmp-astro",
-  "type": "module",
-  "version": "0.0.1",
-  "engines": {
-    "node": ">=22.12.0"
-  },
-  "scripts": {
-    "dev": "astro dev --host 0.0.0.0",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
-  },
-  "dependencies": {
-    "astro": "^7.2.1",
-    "d3": "^7.9.0"
-  }
+	"name": "tmp-astro",
+	"type": "module",
+	"version": "0.0.1",
+	"engines": {
+		"node": ">=22.12.0"
+	},
+	"scripts": {
+		"dev": "astro dev --host 0.0.0.0",
+		"build": "astro build",
+		"preview": "astro preview",
+		"astro": "astro",
+		"lint": "biome lint --write .",
+		"lint:fix": "biome check --write ."
+	},
+	"dependencies": {
+		"@types/d3": "^7.4.3",
+		"astro": "^7.2.1",
+		"d3": "^7.9.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.8"
+	}
 }
