@@ -11,18 +11,16 @@ interface RenderEvent {
 }
 
 // An event augmented with its wrapped title/date lines and the resulting
-// card height, computed once per render before lanes are assigned.
+// card height, used to vertically center each card on its marker.
 interface LaidOutEvent extends RenderEvent {
     titleLines: string[];
     dateLines: string[];
     cardHeight: number;
 }
 
-// Layout knobs that change between the alternating desktop layout and the
-// single-column mobile one, recomputed each render from the container width.
+// Layout knobs recomputed each render from the container width, so cards
+// fill the available space next to the axis.
 interface LayoutConfig {
-    mobile: boolean;
-    laneCount: number;
     cardWidth: number;
     labelMaxWidth: number;
 }
@@ -35,17 +33,13 @@ if (!root) {
 
 const events: RenderEvent[] = JSON.parse(root.dataset.events ?? "[]");
 
-// Minimum vertical pixels between adjacent event markers before
-// they are crowded and stagger into a different lane.
+// Minimum vertical pixels between adjacent event markers before they are
+// crowded together.
 const MIN_MARKER_SPACING = 170;
-const LANE_COUNT = 4;
-// Distance from the axis to the nearest card edge, and the extra distance
-// added per additional lane depth so stacked cards don't overlap. Sized to
-// leave enough room beside the axis for a year-tick label without it
-// touching the nearest card.
-const LANE_GAP = 48;
-const LANE_STEP = 104;
-const CARD_WIDTH = 152;
+// Distance from the axis to the card's left edge.
+const AXIS_GUTTER = 48;
+const MIN_CARD_WIDTH = 160;
+const MAX_CARD_WIDTH = 420;
 const CARD_PADDING_X = 12;
 const CARD_PADDING_Y = 8;
 const CARD_RADIUS = 6;
@@ -58,12 +52,6 @@ const BLOCK_GAP = 6;
 // the top, so text is centered within the space reserved for it.
 const BASELINE_RATIO = 0.75;
 const CANVAS_PADDING = 16;
-// Below this container width there isn't room for cards to alternate
-// left/right of the axis, so layout collapses to a single column.
-const MOBILE_BREAKPOINT_PX = 720;
-// Floor so single-column cards never shrink to something unreadable on
-// extremely narrow viewports.
-const MOBILE_MIN_CARD_WIDTH = 160;
 // "Nice" round year intervals to snap ticks to.
 const YEAR_STEPS = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000];
 const TARGET_TICK_SPACING_PX = 110;
@@ -78,21 +66,16 @@ const MARGIN = { top: 24, bottom: 24 };
 // content afterward, so this doesn't need to be a real coordinate.
 const AXIS_X = 0;
 
-// Measures the mount point to decide between the alternating desktop
-// layout and the single-column mobile one, and to size cards to fit.
+// Sizes cards to fill the space next to the axis, measured from the mount
+// point so the timeline reads well at any viewport width.
 function computeLayoutConfig(): LayoutConfig {
     const containerWidth = root!.clientWidth || window.innerWidth;
-    const mobile = containerWidth < MOBILE_BREAKPOINT_PX;
-    const cardWidth = mobile
-        ? Math.max(
-              MOBILE_MIN_CARD_WIDTH,
-              containerWidth - CANVAS_PADDING * 2 - LANE_GAP,
-          )
-        : CARD_WIDTH;
+    const cardWidth = Math.min(
+        MAX_CARD_WIDTH,
+        Math.max(MIN_CARD_WIDTH, containerWidth - CANVAS_PADDING * 2 - AXIS_GUTTER),
+    );
 
     return {
-        mobile,
-        laneCount: mobile ? 1 : LANE_COUNT,
         cardWidth,
         labelMaxWidth: cardWidth - CARD_PADDING_X * 2,
     };
@@ -215,61 +198,6 @@ function layoutEvents(chart: Chart, config: LayoutConfig): LaidOutEvent[] {
     });
 }
 
-// Greedily assigns each event to whichever lane currently has the most
-// vertical room, so overlapping events stagger apart.
-function assignLanes(
-    laidOut: LaidOutEvent[],
-    y: TimeScale,
-    config: LayoutConfig,
-): Map<number, number> {
-    const laneLastY: number[] = new Array(config.laneCount).fill(-Infinity);
-    const laneOf = new Map<number, number>();
-
-    laidOut.forEach((timelineEvent, index) => {
-        const yPos = y(timelineEvent.key);
-        let bestLane = 0;
-        let bestGap = -Infinity;
-
-        for (let lane = 0; lane < config.laneCount; lane++) {
-            const gap = yPos - laneLastY[lane];
-
-            if (gap > bestGap) {
-                bestGap = gap;
-                bestLane = lane;
-            }
-        }
-
-        laneOf.set(index, bestLane);
-        laneLastY[bestLane] = yPos;
-    });
-
-    return laneOf;
-}
-
-// Alternates lanes left/right of the axis so cards fan out in both
-// directions rather than stacking on one side only. In single-column mode
-// there's only ever one lane, and it always sits to the right.
-function laneOffset(
-    config: LayoutConfig,
-    laneOf: Map<number, number>,
-    index: number,
-) {
-    const lane = laneOf.get(index) ?? 0;
-    const direction = config.mobile ? 1 : lane % 2 === 0 ? -1 : 1;
-    const laneDepth = Math.ceil((lane + 1) / 2);
-
-    return direction * (LANE_GAP + (laneDepth - 1) * LANE_STEP);
-}
-
-// The x of a card's near edge, in the local coordinates of its event group —
-// cards left of the axis grow leftward from the connector, cards right
-// grow rightward from it.
-function cardX(config: LayoutConfig, laneOf: Map<number, number>, index: number) {
-    const offset = laneOffset(config, laneOf, index);
-
-    return offset < 0 ? offset - config.cardWidth : offset;
-}
-
 // Year ticks can round outward past the event domain (e.g. the last event
 // falling mid-year rounds up to the next year boundary), so the axis line
 // needs to reach whichever is furthest: the events or the ticks.
@@ -332,12 +260,11 @@ function drawTextBlock(
 }
 
 // Event groups: a dot on the axis, a connector line, and a card that
-// floats left or right of the axis depending on its lane.
+// floats to the right of the axis.
 function drawEvents(
     chart: Chart,
     y: TimeScale,
     laidOut: LaidOutEvent[],
-    laneOf: Map<number, number>,
     config: LayoutConfig,
 ) {
     const marker = chart
@@ -355,9 +282,7 @@ function drawEvents(
         .append("line")
         .attr("class", "lane-line")
         .attr("x1", 0)
-        .attr("x2", (_timelineEvent: LaidOutEvent, index: number) =>
-            laneOffset(config, laneOf, index),
-        )
+        .attr("x2", AXIS_GUTTER)
         .attr("y1", 0)
         .attr("y2", 0);
 
@@ -387,19 +312,18 @@ function drawEvents(
             }
         });
 
+    const xCenter = AXIS_GUTTER + config.cardWidth / 2;
+
     card.append("rect")
         .attr("class", "event-card-bg")
-        .attr("x", (_timelineEvent: LaidOutEvent, index: number) =>
-            cardX(config, laneOf, index),
-        )
+        .attr("x", AXIS_GUTTER)
         .attr("width", config.cardWidth)
         .attr("y", (timelineEvent: LaidOutEvent) => -timelineEvent.cardHeight / 2)
         .attr("height", (timelineEvent: LaidOutEvent) => timelineEvent.cardHeight)
         .attr("rx", CARD_RADIUS);
 
-    card.each(function (timelineEvent: LaidOutEvent, index: number) {
+    card.each(function (timelineEvent: LaidOutEvent) {
         const group = d3.select(this);
-        const xCenter = cardX(config, laneOf, index) + config.cardWidth / 2;
         const contentTop = -timelineEvent.cardHeight / 2 + CARD_PADDING_Y;
         const titleBlockTop =
             contentTop + timelineEvent.dateLines.length * DATE_LINE_HEIGHT + BLOCK_GAP;
@@ -453,10 +377,9 @@ function render() {
     const chart = svg.append("g").attr("class", "chart-content");
 
     const laidOut = layoutEvents(chart, config);
-    const laneOf = assignLanes(laidOut, y, config);
 
     drawAxis(chart, y, tickYears, lastPixel);
-    drawEvents(chart, y, laidOut, laneOf, config);
+    drawEvents(chart, y, laidOut, config);
 
     fitCanvas(svg, chart);
 }
