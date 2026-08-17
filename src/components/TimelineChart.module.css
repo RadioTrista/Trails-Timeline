@@ -1,0 +1,80 @@
+.timeline-viewport {
+    background: var(--color-parchment);
+    padding: 32px 16px 48px;
+    /* Layout is sized in JS to fit the container; this only guards against
+       stray sub-pixel overflow rather than enabling a scrollbar. */
+    overflow-x: hidden;
+    mask-image: linear-gradient(
+        180deg,
+        transparent 0,
+        black 24px,
+        black calc(100% - 24px),
+        transparent 100%
+    );
+}
+
+:global(.timeline-axis path),
+:global(.timeline-axis line) {
+    stroke: var(--color-gold);
+}
+
+:global(.timeline-axis text) {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    fill: var(--color-ink);
+}
+
+:global(.lane-line) {
+    stroke: var(--color-gold);
+    stroke-width: 1px;
+    opacity: 0.6;
+}
+
+:global(.event-marker) {
+    fill: var(--color-burgundy);
+    stroke: var(--color-parchment);
+    stroke-width: 1.5px;
+}
+
+:global(.event-card) {
+    cursor: pointer;
+}
+
+:global(.event-card-bg) {
+    fill: #f7f0e0;
+    stroke: var(--color-gold);
+    stroke-width: 1px;
+    filter: drop-shadow(0 1px 2px rgba(43, 36, 24, 0.25));
+    transition:
+        stroke 0.15s ease,
+        stroke-width 0.15s ease,
+        filter 0.15s ease;
+}
+
+:global(.event-card:hover .event-card-bg),
+:global(.event-card:focus-visible .event-card-bg) {
+    stroke: var(--color-burgundy);
+    stroke-width: 1.5px;
+    filter: drop-shadow(0 2px 4px rgba(43, 36, 24, 0.35));
+}
+
+:global(.event-card:focus-visible) {
+    outline: none;
+}
+
+:global(.event-card-date) {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    fill: var(--color-gold);
+    pointer-events: none;
+}
+
+:global(.event-card-title) {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 12px;
+    fill: var(--color-ink);
+    pointer-events: none;
+}
